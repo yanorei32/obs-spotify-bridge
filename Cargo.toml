@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "obs-spotify"
+name = "obs-spotify-server"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

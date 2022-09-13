@@ -515,7 +515,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "obs-spotify"
+name = "obs-spotify-server"
 version = "0.1.0"
 dependencies = [
  "envy",
