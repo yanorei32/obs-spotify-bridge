@@ -1,9 +1,9 @@
 use tungstenite::{connect, Message};
 use url::Url;
 
-pub(crate) mod model;
+pub mod model;
 
-pub(crate) fn get_spotify_token(discord_token: &str) -> String {
+pub fn get_spotify_token(discord_token: &str) -> String {
     let url = Url::parse("wss://gateway.discord.gg/").unwrap();
     let (mut ws, _) = connect(url).expect("Failed to connect Discord");
 
@@ -22,22 +22,19 @@ pub(crate) fn get_spotify_token(discord_token: &str) -> String {
 
     loop {
         match ws.read_message().expect("Error reading message") {
-            Message::Text(v) => match serde_json::from_str::<model::Response>(&v) {
-                Ok(v) => {
-                    let model::Response::Ready(v) = v;
+            Message::Text(v) => {
+                if let Ok(model::Response::Ready(v)) = serde_json::from_str::<model::Response>(&v) {
                     return v
                         .connected_accounts
                         .iter()
-                        .filter_map(|v| match v {
+                        .find_map(|v| match v {
                             model::ConnectedAccount::Spotify { access_token } => Some(access_token),
-                            _ => None,
+                            model::ConnectedAccount::Other => None,
                         })
-                        .next()
                         .expect("Failed to lookup Spotify token")
                         .to_string();
                 }
-                Err(_) => {}
-            },
+            }
             Message::Close(v) => panic!("Unexpected close by server: {:?}", v),
             _ => {}
         }

@@ -1,20 +1,13 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Config {
-    pub(crate) discord_token: String,
+pub struct Config {
+    pub discord_token: String,
+
+    #[serde(default = "default_bind_address")]
+    pub bind_address: String,
 }
 
-#[derive(Debug, Serialize)]
-pub(crate) struct Music {
-    pub(crate) title: String,
-    pub(crate) artists: String,
-    pub(crate) albumart: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(tag = "t", content = "c")]
-pub(crate) enum Notify {
-    Playing(Music),
-    Paused,
+fn default_bind_address() -> String {
+    "0.0.0.0:8000".to_string()
 }

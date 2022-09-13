@@ -1,25 +1,25 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ReqOp2DProp {}
+pub struct ReqOp2DProp {}
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ReqOp2D {
-    pub(crate) token: String,
-    pub(crate) properties: ReqOp2DProp,
-    pub(crate) compress: bool,
+pub struct ReqOp2D {
+    pub token: String,
+    pub properties: ReqOp2DProp,
+    pub compress: bool,
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ReqOp2 {
-    pub(crate) op: i32,
-    pub(crate) d: ReqOp2D,
+pub struct ReqOp2 {
+    pub op: i32,
+    pub d: ReqOp2D,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
-pub(crate) enum ConnectedAccount {
+pub enum ConnectedAccount {
     Spotify {
         access_token: String,
     },
@@ -28,13 +28,13 @@ pub(crate) enum ConnectedAccount {
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Ready {
-    pub(crate) connected_accounts: Vec<ConnectedAccount>,
+pub struct Ready {
+    pub connected_accounts: Vec<ConnectedAccount>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "t", content = "d")]
 #[serde(rename_all = "UPPERCASE")]
-pub(crate) enum Response {
+pub enum Response {
     Ready(Ready),
 }

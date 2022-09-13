@@ -1,35 +1,35 @@
 use serde::{Deserialize, Serialize};
 
-pub(crate) type EventCallback = fn(WssEvent);
+pub type Sender = tokio::sync::mpsc::Sender<WssEvent>;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
-pub(crate) enum Request {
+pub enum Request {
     Ping,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Image {
-    pub(crate) width: i32,
-    pub(crate) height: i32,
-    pub(crate) url: String,
+pub struct Image {
+    pub width: i32,
+    pub height: i32,
+    pub url: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Album {
-    pub(crate) images: Vec<Image>,
+pub struct Album {
+    pub images: Vec<Image>,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Artist {
-    pub(crate) name: String,
+pub struct Artist {
+    pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
-pub(crate) enum AlbumLikeObject {
+pub enum AlbumLikeObject {
     Album(Album),
     #[serde(other)]
     Other,
@@ -38,71 +38,71 @@ pub(crate) enum AlbumLikeObject {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
-pub(crate) enum ArtistLikeObject {
+pub enum ArtistLikeObject {
     Artist(Artist),
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Track {
-    pub(crate) name: String,
-    pub(crate) artists: Vec<ArtistLikeObject>,
-    pub(crate) album: AlbumLikeObject,
+pub struct Track {
+    pub name: String,
+    pub artists: Vec<ArtistLikeObject>,
+    pub album: AlbumLikeObject,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
-pub(crate) enum PSCItem {
+pub enum PSCItem {
     Track(Track),
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct PSCState {
-    pub(crate) item: Option<PSCItem>,
-    pub(crate) is_playing: bool,
+pub struct PSCState {
+    pub item: Option<PSCItem>,
+    pub is_playing: bool,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct PSCEvent {
-    pub(crate) state: PSCState,
+pub struct PSCEvent {
+    pub state: PSCState,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct PlayerStateChanged {
-    pub(crate) event: PSCEvent,
+pub struct PlayerStateChanged {
+    pub event: PSCEvent,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(tag = "type")]
-pub(crate) enum Event {
+pub enum Event {
     PlayerStateChanged(PlayerStateChanged),
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Payload {
-    pub(crate) events: Vec<Event>,
+pub struct Payload {
+    pub events: Vec<Event>,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct PutHeader {
+pub struct PutHeader {
     #[serde(rename = "Spotify-Connection-Id")]
-    pub(crate) spotify_connection_id: String,
+    pub spotify_connection_id: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct WssEvent {
-    pub(crate) payloads: Vec<Payload>,
+pub struct WssEvent {
+    pub payloads: Vec<Payload>,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Put {
-    pub(crate) headers: PutHeader,
+pub struct Put {
+    pub headers: PutHeader,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-pub(crate) enum MessageLikeObjects {
+pub enum MessageLikeObjects {
     WssEvent(WssEvent),
     Put(Put),
 }
@@ -110,7 +110,7 @@ pub(crate) enum MessageLikeObjects {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
-pub(crate) enum Response {
+pub enum Response {
     Message(MessageLikeObjects),
     Pong,
 }
