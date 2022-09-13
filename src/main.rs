@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic, clippy::nursery)]
+#![warn(clippy::pedantic)]
 
 use crate::discordws::get_spotify_token;
 use crate::spotifyws::fetch;
