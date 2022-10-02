@@ -17,7 +17,7 @@ jobs:
 
       - run: |
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools gcc-mingw-w64-x86-64
+          sudo apt-get install -y musl-tools gcc-mingw-w64-x86-64 libssl-dev
 
       - uses: actions-rs/toolchain@v1.0.7
         with:
@@ -40,6 +40,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
 
+      - name: install cargo-license
+        uses: actions-rs/cargo@v1.0.3
+        with:
+          command: install
+          args: cargo-license
+
       - name: compile for unit test
         uses: actions-rs/cargo@v1.0.3
         with:
@@ -61,6 +67,22 @@ jobs:
           command: build
           args: --release --target x86_64-pc-windows-gnu
 
+      - run: |
+          cargo license \
+            --authors \
+            --do-not-bundle \
+            --avoid-dev-deps \
+            --avoid-build-deps \
+            --filter-platform x86_64-pc-windows-gnu \
+              > CREDITS.windows.txt
+          cargo license \
+            --authors \
+            --do-not-bundle \
+            --avoid-dev-deps \
+            --avoid-build-deps \
+            --filter-platform x86_64-unknown-linux-musl \
+              > CREDITS.linux.txt
+
       - name: pre-release
         uses: marvinpinto/action-automatic-releases@latest
         if: "! startsWith(github.ref, 'refs/tags/')"
@@ -70,7 +92,8 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            CREDITS
+            CREDITS.windows.txt
+            CREDITS.linux.txt
             LICENSE
             README.md
             target/x86_64-pc-windows-gnu/release/friendnotes-migrator.exe
@@ -81,7 +104,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            CREDITS
+            CREDITS.windows.txt
+            CREDITS.linux.txt
             LICENSE
             README.md
             target/x86_64-pc-windows-gnu/release/friendnotes-migrator.exe
