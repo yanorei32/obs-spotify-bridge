@@ -1,97 +1,71 @@
 #![warn(clippy::pedantic)]
+use crate::discordapi::{get_spotify_credentials, renew_spotify_token};
+use crate::filter::duplicate_filter;
+use crate::obsdriver::obsdriver;
+use crate::spotifyapi::{connect_ws, is_available_token};
+use crate::wsserver::serve;
+use tokio::sync::watch;
 
-use crate::discordws::get_spotify_token;
-use crate::spotifyws::fetch;
-use itertools::Itertools;
-use tokio::sync::{mpsc, watch};
-
-mod discordws;
+mod discordapi;
+mod filter;
 mod model;
-mod spotifyws;
+mod notify_model;
+mod obsdriver;
+mod spotifyapi;
 mod wsserver;
 
 #[tokio::main]
 async fn main() {
     let c = envy::from_env::<model::Config>().unwrap();
 
-    println!("Get token by discord...");
-    let token = get_spotify_token(&c.discord_token);
+    println!("Get Spotify credential by Discord WebSocket...");
+    let cred = get_spotify_credentials(&c.discord_token).unwrap();
 
-    let (notify_tx, notify_rx) = watch::channel(wsserver::model::Notify::Paused {});
+    let (tx, to_f) = watch::channel(notify_model::Notify::Paused {});
+    let (from_f, mut rx) = watch::channel(notify_model::Notify::Paused {});
 
-    println!("Listen on: ws://{}", &c.bind_address);
-    tokio::spawn(async move {
-        wsserver::wsserver(&c.bind_address, &notify_rx).await;
-    });
+    let token = if is_available_token(&cred.access_token).await.is_ok() {
+        cred.access_token.clone()
+    } else {
+        println!("Renew Spotify credential by Discord API...");
+        renew_spotify_token(&c.discord_token, &cred.id)
+            .await
+            .unwrap()
+    };
 
-    let (response_tx, mut response_rx) = mpsc::channel::<spotifyws::model::WssEvent>(1);
-    println!("Connect to Spotify with: {}", token);
-    tokio::spawn(async move {
-        fetch(&token, &response_tx).await;
-    });
+    let mut filter = tokio::spawn(async move { duplicate_filter(to_f, from_f).await });
+    let mut spotify_ws = tokio::spawn(async move { connect_ws(&token, tx).await });
+
+    let rx2 = rx.clone();
+    let mut wsserver = tokio::spawn(async move { serve(&c.ws_bind_address, rx2).await });
+
+    let rx3 = rx.clone();
+    let mut obsdriver =
+        tokio::spawn(
+            async move { obsdriver(&c.obs_address, c.obs_port, c.obs_password, rx3).await },
+        );
+
+    println!("Entering Main Loop...");
 
     loop {
-        let v = match response_rx.recv().await {
-            Some(v) => v,
-            _ => continue,
-        };
-
-        let v = v.payloads.first().and_then(|v| v.events.first());
-
-        let spotifyws::model::Event::PlayerStateChanged(v) = match v {
-            Some(v) => v,
-            _ => continue,
-        };
-
-        if !v.event.state.is_playing {
-            println!("♪ Paused");
-
-            notify_tx.send(wsserver::model::Notify::Paused).unwrap();
-
-            continue;
+        tokio::select! {
+            v = &mut spotify_ws => {
+                panic!("Unexpected Shutdown SpotifyWS: {:?}", v);
+            },
+            v = &mut wsserver => {
+                panic!("Unexpected Shutdown WSServer: {:?}", v);
+            },
+            v = &mut filter => {
+                panic!("Unexpected Shutdown Filter: {:?}", v);
+            },
+            v = &mut obsdriver => {
+                panic!("Unexpected Shutdown OBSDriver: {:?}", v);
+            },
+            changed = rx.changed() => {
+                changed.expect("Failed to recv event by master");
+                let v = rx.borrow().clone();
+                println!("{:?}", v);
+            },
         }
-
-        let v = match &v.event.state.item {
-            Some(spotifyws::model::PSCItem::Track(x)) => x,
-            None => {
-                println!("♪ Unknown");
-
-                notify_tx.send(wsserver::model::Notify::Unknown {}).unwrap();
-
-                continue;
-            }
-        };
-
-        #[allow(unstable_name_collisions)]
-        let artists: String = v
-            .artists
-            .iter()
-            .map(|v| match v {
-                spotifyws::model::ArtistLikeObject::Artist(v) => v.name.as_str(),
-            })
-            .intersperse(", ")
-            .collect();
-
-        let album = match &v.album {
-            spotifyws::model::AlbumLikeObject::Album(a) => a,
-            spotifyws::model::AlbumLikeObject::Other => return,
-        };
-
-        let albumart: &str = album
-            .images
-            .iter()
-            .max_by_key(|v| v.width * v.height)
-            .map(|v| v.url.as_str())
-            .unwrap();
-
-        notify_tx
-            .send(wsserver::model::Notify::Playing(wsserver::model::Music {
-                title: v.name.clone(),
-                artists: artists.clone(),
-                albumart: albumart.to_string(),
-            }))
-            .unwrap();
-
-        println!("♪ {} {}: {}", v.name, artists, albumart);
     }
 }

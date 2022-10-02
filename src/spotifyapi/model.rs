@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-pub type Sender = tokio::sync::mpsc::Sender<WssEvent>;
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]

@@ -16,13 +16,17 @@ pub struct ReqOp2 {
     pub d: ReqOp2D,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct SpotifyCredential {
+    pub id: String,
+    pub access_token: String,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "type")]
 pub enum ConnectedAccount {
-    Spotify {
-        access_token: String,
-    },
+    Spotify(SpotifyCredential),
     #[serde(other)]
     Other,
 }
@@ -37,4 +41,9 @@ pub struct Ready {
 #[serde(rename_all = "UPPERCASE")]
 pub enum Response {
     Ready(Ready),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SpotifyAccessTokenApiResponse {
+    pub access_token: String,
 }

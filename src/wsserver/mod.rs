@@ -1,3 +1,5 @@
+use crate::notify_model as model;
+use anyhow::{Context, Result};
 use futures::StreamExt;
 use futures_util::SinkExt;
 use std::time::Duration;
@@ -7,23 +9,19 @@ use tokio_tungstenite::{
     tungstenite::{Error as TSError, Message, Result as TSResult},
 };
 
-pub mod model;
-
-pub async fn wsserver(bind_address: &str, rx: &model::Receiver) {
+pub async fn serve(bind_address: &str, rx: model::Receiver) -> Result<()> {
     let listener = TcpListener::bind(bind_address)
         .await
-        .expect("Failed to listen TCP");
+        .with_context(|| "Failed to listen TCP")?;
 
     while let Ok((stream, _)) = listener.accept().await {
-        let _ = stream
-            .peer_addr()
-            .expect("connected streams should have a peer address");
-
         tokio::spawn(accept_connection(stream, rx.clone()));
     }
+
+    Ok(())
 }
 
-pub async fn accept_connection(stream: TcpStream, rx: model::Receiver) {
+async fn accept_connection(stream: TcpStream, rx: model::Receiver) {
     if let Err(e) = handle_connection(stream, rx).await {
         match e {
             TSError::ConnectionClosed | TSError::Protocol(_) | TSError::Utf8 => (),
@@ -32,7 +30,7 @@ pub async fn accept_connection(stream: TcpStream, rx: model::Receiver) {
     }
 }
 
-pub async fn handle_connection(stream: TcpStream, mut rx: model::Receiver) -> TSResult<()> {
+async fn handle_connection(stream: TcpStream, mut rx: model::Receiver) -> TSResult<()> {
     let ws = accept_async(stream).await.expect("Failed to accept");
 
     let (mut tx, _) = ws.split();
