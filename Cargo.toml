@@ -10,11 +10,11 @@ anyhow = "1.0.65"
 envy = "0.4.2"
 futures = "0.3.24"
 futures-util = "0.3.24"
-itertools = "0.10.3"
-reqwest = { version = "0.11.11", features = ["native-tls", "blocking", "json"] }
-serde = { version = "1.0.144", features = ["derive"] }
+itertools = "0.10.5"
+reqwest = { version = "0.11.12", features = ["native-tls"] }
+serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0.85"
-tokio = { version = "1.21.0", features = [
+tokio = { version = "1.21.2", features = [
 	"rt-multi-thread",
 	"macros",
 	"time",
