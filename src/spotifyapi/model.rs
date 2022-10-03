@@ -131,7 +131,7 @@ pub enum Response {
 }
 
 #[derive(Debug)]
-pub enum PlayingState {
+pub enum PlayingDevice {
     Playing(String),
     Paused,
 }

@@ -33,7 +33,17 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
 
     let (mut tx, mut rx) = ws.split();
     let mut interval = tokio::time::interval(Duration::from_secs(30));
-    let mut playing = model::PlayingState::Paused;
+    let mut playing = {
+        if let Ok(s) = fetch_initial_state(token).await {
+            let (n, p) = parse_pscstate(&s).await?;
+            sender
+                .send(n)
+                .with_context(|| "Failed to send paused/playing/unknown message")?;
+            p
+        } else {
+            model::PlayingDevice::Paused
+        }
+    };
 
     loop {
         tokio::select! {
@@ -77,79 +87,28 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
                             _ => continue,
                         };
 
-                        let v = match v {
+                        match v {
                             model::Event::DeviceStateChanged(v) => {
-                                if let model::PlayingState::Playing(id) = &playing {
+                                if let model::PlayingDevice::Playing(id) = &playing {
                                     // active player is die
                                     if !v.event.devices.iter().any(|d| &d.id == id) {
                                         sender
                                             .send(Notify::Paused)
                                             .with_context(|| "Failed to send paused message")?;
 
-                                        playing = model::PlayingState::Paused;
+                                        playing = model::PlayingDevice::Paused;
                                     }
                                 }
-
-                                continue;
                             },
-                            model::Event::PlayerStateChanged(v) => v
-                        };
-
-                        if !v.event.state.is_playing {
-                            sender
-                                .send(Notify::Paused)
-                                .with_context(|| "Failed to send paused message")?;
-
-                            playing = model::PlayingState::Paused;
-                            continue;
-                        }
-
-                        let track = match &v.event.state.item {
-                            Some(model::PSCItem::Track(x)) => x,
-                            None => {
+                            model::Event::PlayerStateChanged(v) => {
+                                let (n, p) = parse_pscstate(&v.event.state).await?;
                                 sender
-                                    .send(Notify::Unknown)
-                                    .with_context(|| "Failed to send unknown message")?;
-
-                                playing = model::PlayingState::Paused;
-                                continue;
+                                    .send(n)
+                                    .with_context(|| "Failed to send paused/playing/unknown message")?;
+                                playing = p;
                             }
                         };
 
-                        #[allow(unstable_name_collisions)]
-                        let artists: String = track
-                            .artists
-                            .iter()
-                            .map(|v| match v {
-                                model::ArtistLikeObject::Artist(v) => v.name.as_str(),
-                            })
-                            .intersperse(", ")
-                            .collect();
-
-                        let album = match &track.album {
-                            model::AlbumLikeObject::Album(a) => a,
-                            model::AlbumLikeObject::Other => continue,
-                        };
-
-                        let albumart: &str = album
-                            .images
-                            .iter()
-                            .max_by_key(|v| v.width * v.height)
-                            .map(|v| v.url.as_str())
-                            .unwrap();
-
-
-                        let p = Notify::Playing(Music {
-                            title: track.name.clone(),
-                            artists: artists.clone(),
-                            albumart: albumart.to_string(),
-                        });
-
-                        playing = model::PlayingState::Playing(
-                            v.event.state.device.id.clone()
-                        );
-
-                        sender.send(p).with_context(|| "Failed to send playing message")?;
                     },
                 };
 
@@ -163,4 +122,60 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
             }
         }
     }
+}
+
+async fn fetch_initial_state(token: &str) -> Result<model::PSCState> {
+    let resp = reqwest::Client::new()
+        .get("https://api.spotify.com/v1/me/player")
+        .bearer_auth(token)
+        .send()
+        .await
+        .with_context(|| "Failed to get initial playing song")?;
+
+    Ok(resp
+        .json::<model::PSCState>()
+        .await
+        .with_context(|| "Failed to parse json")?)
+}
+
+async fn parse_pscstate(s: &model::PSCState) -> Result<(Notify, model::PlayingDevice)> {
+    if !s.is_playing {
+        return Ok((Notify::Paused, model::PlayingDevice::Paused));
+    }
+
+    let track = match &s.item {
+        Some(model::PSCItem::Track(x)) => x,
+        None => return Ok((Notify::Unknown, model::PlayingDevice::Paused)),
+    };
+
+    #[allow(unstable_name_collisions)]
+    let artists: String = track
+        .artists
+        .iter()
+        .map(|v| match v {
+            model::ArtistLikeObject::Artist(v) => v.name.as_str(),
+        })
+        .intersperse(", ")
+        .collect();
+
+    let album = match &track.album {
+        model::AlbumLikeObject::Album(a) => a,
+        model::AlbumLikeObject::Other => bail!("Unexpected AlbumLikeObject"),
+    };
+
+    let albumart: &str = album
+        .images
+        .iter()
+        .max_by_key(|v| v.width * v.height)
+        .map(|v| v.url.as_str())
+        .unwrap();
+
+    Ok((
+        Notify::Playing(Music {
+            title: track.name.clone(),
+            artists: artists,
+            albumart: albumart.to_string(),
+        }),
+        model::PlayingDevice::Playing(s.device.id.clone()),
+    ))
 }
