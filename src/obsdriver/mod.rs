@@ -1,12 +1,15 @@
-use crate::notify_model as model;
+use crate::notify_model::{Music, Notify, Receiver};
 use anyhow::{Context, Result};
 use obws::{requests::inputs::SetSettings, Client};
+
+pub mod model;
 
 pub async fn obsdriver(
     addr: &str,
     port: u16,
     pass: Option<String>,
-    rx: model::Receiver,
+    rx: Receiver,
+    mut shutdown_rx: model::ShutdownReceiver,
 ) -> Result<()> {
     let c = Client::connect(addr, port, pass)
         .await
@@ -16,12 +19,21 @@ pub async fn obsdriver(
 
     loop {
         tokio::select! {
+            changed = shutdown_rx.changed() => {
+                changed.with_context(|| "Failed to recv shutdown by master")?;
+
+                let v = None;
+                update_text(&c, &v).await?;
+                update_albumart(&c, &v).await?;
+
+                return Ok(())
+            },
             changed = rx.changed() => {
                 changed.with_context(|| "Failed to recv event by master")?;
 
                 let v = rx.borrow().clone();
 
-                let v = if let model::Notify::Playing(v) = v {
+                let v = if let Notify::Playing(v) = v {
                     Some(v)
                 } else {
                     None
@@ -34,7 +46,7 @@ pub async fn obsdriver(
     }
 }
 
-pub async fn update_text(c: &Client, v: &Option<model::Music>) -> Result<()> {
+pub async fn update_text(c: &Client, v: &Option<Music>) -> Result<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {
@@ -67,7 +79,7 @@ pub async fn update_text(c: &Client, v: &Option<model::Music>) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_albumart(c: &Client, v: &Option<model::Music>) -> Result<()> {
+pub async fn update_albumart(c: &Client, v: &Option<Music>) -> Result<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {

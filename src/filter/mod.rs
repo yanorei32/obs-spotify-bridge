@@ -1,7 +1,7 @@
 use crate::notify_model::{Notify, Receiver, Sender};
 use anyhow::{Context, Result};
 
-pub async fn duplicate_filter(rx: Receiver, tx: Sender) -> Result<()> {
+pub async fn drop_duplicate(rx: Receiver, tx: Sender) -> Result<()> {
     let mut rx = rx.clone();
     let mut pv = Notify::Unknown;
 

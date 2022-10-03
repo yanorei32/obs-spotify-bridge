@@ -81,7 +81,7 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
                             model::Event::DeviceStateChanged(v) => {
                                 if let model::PlayingState::Playing(id) = &playing {
                                     // active player is die
-                                    if v.event.devices.iter().find(|d| &d.id == id).is_none() {
+                                    if !v.event.devices.iter().any(|d| &d.id == id) {
                                         sender
                                             .send(Notify::Paused)
                                             .with_context(|| "Failed to send paused message")?;
