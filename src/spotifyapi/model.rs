@@ -55,8 +55,14 @@ pub enum PSCItem {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Device {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PSCState {
     pub item: Option<PSCItem>,
+    pub device: Device,
     pub is_playing: bool,
 }
 
@@ -71,10 +77,21 @@ pub struct PlayerStateChanged {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct DSCEvent {
+    pub devices: Vec<Device>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeviceStateChanged {
+    pub event: DSCEvent,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(tag = "type")]
 pub enum Event {
     PlayerStateChanged(PlayerStateChanged),
+    DeviceStateChanged(DeviceStateChanged),
 }
 
 #[derive(Debug, Deserialize)]
@@ -111,4 +128,10 @@ pub enum MessageLikeObjects {
 pub enum Response {
     Message(MessageLikeObjects),
     Pong,
+}
+
+#[derive(Debug)]
+pub enum PlayingState {
+    Playing(String),
+    Paused,
 }
