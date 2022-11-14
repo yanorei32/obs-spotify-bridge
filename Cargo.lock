@@ -652,9 +652,9 @@ dependencies = [
 
 [[package]]
 name = "obws"
-version = "0.10.0-beta.4"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b53139ae8cc4ee3bd1b5a839c9e5a7421034e2538820bbe04c6c5ad2b8aedbf"
+checksum = "96eeac4bd8bbe8849c9c61796a1513a6e2a3e9d6ab5d46ba24989d7c4e18ef1e"
 dependencies = [
  "base64",
  "bitflags",
