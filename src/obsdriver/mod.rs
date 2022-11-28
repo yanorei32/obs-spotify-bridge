@@ -63,7 +63,7 @@ pub async fn update_text(c: &Client, v: &Option<Music>) -> Result<()> {
             serde_json::Value::String(if let Some(v) = &v {
                 format!("♪{}/{}", v.title, v.artists)
             } else {
-                "".to_string()
+                String::new()
             }),
         );
 

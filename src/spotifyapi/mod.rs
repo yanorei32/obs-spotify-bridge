@@ -35,7 +35,7 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
     let mut interval = tokio::time::interval(Duration::from_secs(30));
     let mut playing = {
         if let Ok(s) = fetch_initial_state(token).await {
-            let (n, p) = parse_pscstate(&s).await?;
+            let (n, p) = parse_pscstate(&s)?;
             sender
                 .send(n)
                 .with_context(|| "Failed to send paused/playing/unknown message")?;
@@ -101,7 +101,7 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
                                 }
                             },
                             model::Event::PlayerStateChanged(v) => {
-                                let (n, p) = parse_pscstate(&v.event.state).await?;
+                                let (n, p) = parse_pscstate(&v.event.state)?;
                                 sender
                                     .send(n)
                                     .with_context(|| "Failed to send paused/playing/unknown message")?;
@@ -132,13 +132,12 @@ async fn fetch_initial_state(token: &str) -> Result<model::PSCState> {
         .await
         .with_context(|| "Failed to get initial playing song")?;
 
-    Ok(resp
-        .json::<model::PSCState>()
+    resp.json::<model::PSCState>()
         .await
-        .with_context(|| "Failed to parse json")?)
+        .with_context(|| "Failed to parse json")
 }
 
-async fn parse_pscstate(s: &model::PSCState) -> Result<(Notify, model::PlayingDevice)> {
+fn parse_pscstate(s: &model::PSCState) -> Result<(Notify, model::PlayingDevice)> {
     if !s.is_playing {
         return Ok((Notify::Paused, model::PlayingDevice::Paused));
     }
@@ -173,7 +172,7 @@ async fn parse_pscstate(s: &model::PSCState) -> Result<(Notify, model::PlayingDe
     Ok((
         Notify::Playing(Music {
             title: track.name.clone(),
-            artists: artists,
+            artists,
             albumart: albumart.to_string(),
         }),
         model::PlayingDevice::Playing(s.device.id.clone()),
