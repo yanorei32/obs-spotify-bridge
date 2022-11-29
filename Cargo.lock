@@ -711,7 +711,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-tungstenite 0.18.0",
- "tungstenite 0.17.3",
+ "tungstenite 0.18.0",
  "url",
 ]
 
@@ -1363,7 +1363,6 @@ dependencies = [
  "http",
  "httparse",
  "log",
- "native-tls",
  "rand",
  "sha-1",
  "thiserror",
