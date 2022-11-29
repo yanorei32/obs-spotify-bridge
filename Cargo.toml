@@ -21,7 +21,7 @@ tokio = { version = "1.22.0", features = [
 	"sync",
 	"signal",
 ] }
-tokio-tungstenite = { version = "0.17.2", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
 tungstenite = { version = "0.17.3", features = ["native-tls"] }
 url = "2.3.1"
 obws = "0.10.0"
