@@ -96,7 +96,7 @@ pub async fn update_albumart(c: &Client, v: &Option<Music>) -> Result<()> {
             serde_json::Value::String(if let Some(v) = &v {
                 v.albumart.to_string()
             } else {
-                "https://example.com/".to_string()
+                "about:blank".to_string()
             }),
         );
 
