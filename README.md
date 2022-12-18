@@ -1,1 +1,1 @@
-# OBS Spotify Server
+# OBS Spotify Bridge
