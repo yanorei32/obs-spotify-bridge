@@ -19,7 +19,8 @@ async fn main() {
     let c = envy::from_env::<model::Config>().unwrap();
 
     println!("Get Spotify credential by Discord WebSocket...");
-    let cred = get_spotify_credentials(&c.discord_token).unwrap();
+    let cred = get_spotify_credentials(&c.discord_token)
+        .expect("Failed to get Spotify credential from Discord credential.");
 
     let (tx, to_f) = watch::channel(notify_model::Notify::Paused {});
     let (from_f, mut rx) = watch::channel(notify_model::Notify::Paused {});
