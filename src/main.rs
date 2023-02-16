@@ -51,8 +51,7 @@ async fn main() {
 
     loop {
         tokio::select! {
-            s = tokio::signal::ctrl_c() => {
-                s.unwrap();
+            _ = tokio::signal::ctrl_c() => {
                 shutdown_tx.send(obsdriver::model::ExpectedState::GracefulShutdown).unwrap();
             },
             v = &mut spotify_ws => {
@@ -66,7 +65,7 @@ async fn main() {
             },
             v = &mut obsdriver => {
                 if let Err(v) = v.unwrap() {
-                    panic!("Unexpected Shutdown OBSDriver: {:?}", v);
+                    panic!("Unexpected Shutdown OBSDriver: {v:?}");
                 } else {
                     println!("Graceful shutdown is complete");
                     return
@@ -75,7 +74,7 @@ async fn main() {
             changed = rx.changed() => {
                 changed.expect("Failed to recv event by master");
                 let v = rx.borrow().clone();
-                println!("{:?}", v);
+                println!("{v:?}");
             },
         }
     }

@@ -24,7 +24,7 @@ pub async fn is_available_token(token: &str) -> Result<()> {
 }
 
 pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
-    let url = format!("wss://dealer.spotify.com/?access_token={}", token);
+    let url = format!("wss://dealer.spotify.com/?access_token={token}");
     let url = Url::parse(&url).with_context(|| "Failed to parse URL, Invalid token?")?;
 
     let (ws, _) = connect_async(url)
@@ -48,10 +48,7 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
     loop {
         tokio::select! {
             msg = rx.next() => {
-                let msg = match msg {
-                    Some(msg) => msg,
-                    None => continue,
-                };
+                let Some(msg) = msg else { continue };
 
                 let msg_str = match msg.with_context(|| "Failed to read message")? {
                     Message::Text(v) => v,
@@ -82,10 +79,7 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
                     model::MessageLikeObjects::WssEvent(v) => {
                         let v = v.payloads.first().and_then(|v| v.events.first());
 
-                        let v = match v {
-                            Some(v) => v,
-                            _ => continue,
-                        };
+                        let Some(v) = v else { continue };
 
                         match v {
                             model::Event::DeviceStateChanged(v) => {
@@ -142,9 +136,8 @@ fn parse_pscstate(s: &model::PSCState) -> Result<(Notify, model::PlayingDevice)>
         return Ok((Notify::Paused, model::PlayingDevice::Paused));
     }
 
-    let track = match &s.item {
-        Some(model::PSCItem::Track(x)) => x,
-        None => return Ok((Notify::Unknown, model::PlayingDevice::Paused)),
+    let Some(model::PSCItem::Track(track)) = &s.item else {
+        return Ok((Notify::Unknown, model::PlayingDevice::Paused))
     };
 
     #[allow(unstable_name_collisions)]

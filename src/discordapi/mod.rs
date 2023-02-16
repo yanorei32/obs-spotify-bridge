@@ -51,8 +51,7 @@ pub fn get_spotify_credentials(discord_token: &str) -> Result<model::SpotifyCred
 pub async fn renew_spotify_token(discord_token: &str, spotify_id: &str) -> Result<String> {
     let resp = reqwest::Client::new()
         .get(format!(
-            "https://discord.com/api/v9/users/@me/connections/spotify/{}/access-token",
-            spotify_id,
+            "https://discord.com/api/v9/users/@me/connections/spotify/{spotify_id}/access-token",
         ))
         .header(reqwest::header::AUTHORIZATION, discord_token)
         .send()
