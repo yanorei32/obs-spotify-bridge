@@ -15,6 +15,10 @@ Spotify tokens rotate and expire in a very short time.
 But Discord tokens are valid for a long time,
 and we can use them to get valid Spotify tokens.
 
+## Download
+
+https://github.com/yanorei32/obs-spotify-bridge/releases/tag/latest
+
 ## How to
 
 ### Step 0. Connect Discord account to the Spotify account
