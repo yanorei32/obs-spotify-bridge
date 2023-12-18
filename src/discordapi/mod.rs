@@ -18,12 +18,12 @@ pub fn get_spotify_credentials(discord_token: &str) -> Result<model::SpotifyCred
         },
     };
 
-    ws.write_message(Message::Text(serde_json::to_string(&v).unwrap()))
+    ws.send(Message::Text(serde_json::to_string(&v).unwrap()))
         .with_context(|| "Failed to send op:2")?;
 
     loop {
         match ws
-            .read_message()
+            .read()
             .with_context(|| "Failed to read_message")?
         {
             Message::Text(v) => {
