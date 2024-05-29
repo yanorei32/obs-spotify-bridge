@@ -1,6 +1,6 @@
 use crate::notify_model::{Music, Notify, Receiver};
 use anyhow::{Context, Result};
-use obws::{requests::inputs::SetSettings, Client};
+use obws::{requests::inputs::{InputId, SetSettings}, Client};
 
 pub mod model;
 
@@ -50,13 +50,11 @@ pub async fn update_text(c: &Client, v: &Option<Music>) -> Result<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {
-        if !i.name.ends_with("obs-spotify.text") {
+        if !i.id.name.ends_with("obs-spotify.text") {
             continue;
         }
 
         let mut settings = serde_json::Map::new();
-
-        let name = i.name.clone();
 
         settings.insert(
             "text".to_string(),
@@ -69,7 +67,7 @@ pub async fn update_text(c: &Client, v: &Option<Music>) -> Result<()> {
 
         c.inputs()
             .set_settings(SetSettings {
-                input: name.as_str(),
+                input: InputId::Uuid(i.id.uuid),
                 settings: &settings,
                 overlay: Some(true),
             })
@@ -83,13 +81,11 @@ pub async fn update_albumart(c: &Client, v: &Option<Music>) -> Result<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {
-        if !i.name.ends_with("obs-spotify.albumart") {
+        if !i.id.name.ends_with("obs-spotify.albumart") {
             continue;
         }
 
         let mut settings = serde_json::Map::new();
-
-        let name = i.name.clone();
 
         settings.insert(
             "url".to_string(),
@@ -102,7 +98,7 @@ pub async fn update_albumart(c: &Client, v: &Option<Music>) -> Result<()> {
 
         c.inputs()
             .set_settings(SetSettings {
-                input: name.as_str(),
+                input: InputId::Uuid(i.id.uuid),
                 settings: &settings,
                 overlay: Some(true),
             })
