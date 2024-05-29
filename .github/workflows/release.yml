@@ -89,7 +89,7 @@ jobs:
         with:
           tag_name: "latest"
           prerelease: true
-          title: "Development Build"
+          name: "Development Build"
           files: |
             CREDITS.windows.txt
             CREDITS.linux.txt
