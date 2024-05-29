@@ -84,11 +84,10 @@ jobs:
               > CREDITS.linux.txt
 
       - name: pre-release
-        uses: marvinpinto/action-automatic-releases@latest
+        uses: softprops/action-gh-release@v2.0.5
         if: "! startsWith(github.ref, 'refs/tags/')"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
+          tag_name: "latest"
           prerelease: true
           title: "Development Build"
           files: |
@@ -100,7 +99,7 @@ jobs:
             target/x86_64-unknown-linux-gnu/release/obs-spotify-bridge
 
       - name: tagged-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.0.5
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
