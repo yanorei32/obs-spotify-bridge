@@ -3,7 +3,7 @@ This software bridges OBS and Spotify using Discord tokens.
 
 <video style="max-width: 80%" autoplay loop src=https://user-images.githubusercontent.com/11992915/219961789-1d20114a-4d28-4ff6-bd93-f7e7d155fa38.mp4></video>
 
-### Discriminer
+### Disclaimer
 
 I'm not a professional of Discord ToS and Spotify ToS, and it may lead to your account being banned.
 This software is provided without any warranty and it is ***as-is***.
