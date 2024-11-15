@@ -14,7 +14,7 @@ mod obsdriver;
 mod spotifyapi;
 mod wsserver;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let c = envy::from_env::<model::Config>().unwrap();
 
