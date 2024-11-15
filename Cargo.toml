@@ -6,21 +6,20 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.82"
+anyhow = "1.0.93"
 envy = "0.4.2"
-futures = "0.3.30"
-futures-util = "0.3.30"
+futures = "0.3.31"
+futures-util = "0.3.31"
 itertools = "0.13.0"
-reqwest = { version = "0.12.4", features = ["native-tls", "json"] }
-serde = { version = "1.0.200", features = ["derive"] }
-serde_json = "1.0.116"
-tokio = { version = "1.37.0", features = [
+reqwest = { version = "0.12.9", features = ["native-tls", "json"] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.132"
+tokio = { version = "1.41.1", features = [
 	"rt-multi-thread",
 	"macros",
 	"time",
 	"sync",
 	"signal",
 ] }
-tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
-url = "2.5.0"
-obws = "0.12.0"
+tokio-tungstenite = { version = "0.24.0", features = ["native-tls"] }
+obws = "0.13.0"

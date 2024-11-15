@@ -4,7 +4,6 @@ use futures_util::{SinkExt, StreamExt};
 use itertools::Itertools;
 use std::time::Duration;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use url::Url;
 
 pub mod model;
 
@@ -25,7 +24,6 @@ pub async fn is_available_token(token: &str) -> Result<()> {
 
 pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
     let url = format!("wss://dealer.spotify.com/?access_token={token}");
-    let url = Url::parse(&url).with_context(|| "Failed to parse URL, Invalid token?")?;
 
     let (ws, _) = connect_async(url)
         .await

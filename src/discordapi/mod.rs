@@ -1,13 +1,12 @@
 use crate::discordapi::model::SpotifyAccessTokenApiResponse;
 use anyhow::{bail, Context, Result};
 use tokio_tungstenite::tungstenite::{connect, Message};
-use url::Url;
 
 pub mod model;
 
 pub fn get_spotify_credentials(discord_token: &str) -> Result<model::SpotifyCredential> {
-    let url = Url::parse("wss://gateway.discord.gg/").unwrap();
-    let (mut ws, _) = connect(url).with_context(|| "Failed to connect discord ws:// server")?;
+    let (mut ws, _) = connect("wss://gateway.discord.gg/")
+        .with_context(|| "Failed to connect discord ws:// server")?;
 
     let v = model::ReqOp2 {
         op: 2,
@@ -22,10 +21,7 @@ pub fn get_spotify_credentials(discord_token: &str) -> Result<model::SpotifyCred
         .with_context(|| "Failed to send op:2")?;
 
     loop {
-        match ws
-            .read()
-            .with_context(|| "Failed to read_message")?
-        {
+        match ws.read().with_context(|| "Failed to read_message")? {
             Message::Text(v) => {
                 if let Ok(model::Response::Ready(v)) = serde_json::from_str::<model::Response>(&v) {
                     let spotify_id = v
