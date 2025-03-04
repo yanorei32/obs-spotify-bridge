@@ -84,7 +84,7 @@ jobs:
               > CREDITS.linux.txt
 
       - name: pre-release
-        uses: softprops/action-gh-release@v2.1.0
+        uses: softprops/action-gh-release@v2.2.1
         if: "! startsWith(github.ref, 'refs/tags/')"
         with:
           tag_name: "latest"
@@ -99,7 +99,7 @@ jobs:
             target/x86_64-unknown-linux-gnu/release/obs-spotify-bridge
 
       - name: tagged-release
-        uses: softprops/action-gh-release@v2.1.0
+        uses: softprops/action-gh-release@v2.2.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
