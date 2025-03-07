@@ -107,7 +107,7 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
             }
             _ = interval.tick() => {
                 tx.send(
-                    Message::Text(serde_json::to_string(&model::Request::Ping).unwrap())
+                    Message::Text(serde_json::to_string(&model::Request::Ping).unwrap().into())
                 )
                 .await
                 .with_context(|| "Failed to send ping")?;

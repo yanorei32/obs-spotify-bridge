@@ -42,10 +42,10 @@ async fn handle_connection(stream: TcpStream, mut rx: Receiver) -> TSResult<()> 
             changed = rx.changed() => {
                 changed.expect("Failed to recv event by master");
                 let v = rx.borrow().clone();
-                tx.send(Message::Text(serde_json::to_string(&v).unwrap())).await?;
+                tx.send(Message::Text(serde_json::to_string(&v).unwrap().into())).await?;
             }
             _ = interval.tick() => {
-                tx.send(Message::Ping(vec![])).await?;
+                tx.send(Message::Ping(vec![].into())).await?;
             }
         }
     }

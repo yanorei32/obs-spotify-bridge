@@ -17,7 +17,7 @@ pub fn get_spotify_credentials(discord_token: &str) -> Result<model::SpotifyCred
         },
     };
 
-    ws.send(Message::Text(serde_json::to_string(&v).unwrap()))
+    ws.send(Message::Text(serde_json::to_string(&v).unwrap().into()))
         .with_context(|| "Failed to send op:2")?;
 
     loop {
