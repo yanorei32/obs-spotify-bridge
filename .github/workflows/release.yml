@@ -32,7 +32,7 @@ jobs:
           target: x86_64-pc-windows-gnu
 
       - name: cache dependencies
-        uses: Swatinem/rust-cache@v2.7.7
+        uses: Swatinem/rust-cache@v2.7.8
 
       - name: clippy check
         uses: actions-rs/clippy-check@v1.0.7
