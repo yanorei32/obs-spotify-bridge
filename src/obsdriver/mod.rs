@@ -23,8 +23,8 @@ pub async fn obsdriver(
                 changed.with_context(|| "Failed to recv shutdown by master")?;
 
                 let v = None;
-                update_text(&c, &v).await?;
-                update_albumart(&c, &v).await?;
+                update_text(&c, v.as_ref()).await?;
+                update_albumart(&c, v.as_ref()).await?;
 
                 return Ok(())
             },
@@ -39,14 +39,14 @@ pub async fn obsdriver(
                     None
                 };
 
-                update_text(&c, &v).await?;
-                update_albumart(&c, &v).await?;
+                update_text(&c, v.as_ref()).await?;
+                update_albumart(&c, v.as_ref()).await?;
             }
         }
     }
 }
 
-pub async fn update_text(c: &Client, v: &Option<Music>) -> Result<()> {
+pub async fn update_text(c: &Client, v: Option<&Music>) -> Result<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {
@@ -77,7 +77,7 @@ pub async fn update_text(c: &Client, v: &Option<Music>) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_albumart(c: &Client, v: &Option<Music>) -> Result<()> {
+pub async fn update_albumart(c: &Client, v: Option<&Music>) -> Result<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {

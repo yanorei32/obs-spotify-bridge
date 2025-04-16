@@ -99,10 +99,9 @@ pub async fn connect_ws(token: &str, sender: Sender) -> Result<()> {
                                     .with_context(|| "Failed to send paused/playing/unknown message")?;
                                 playing = p;
                             }
-                        };
-
+                        }
                     },
-                };
+                }
 
             }
             _ = interval.tick() => {
