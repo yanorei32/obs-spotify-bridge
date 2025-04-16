@@ -10,6 +10,16 @@ env:
 
 jobs:
   release:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            file: http-clock
+            output: http-clock-linux.zip
+          - target: x86_64-pc-windows-gnu
+            file: http-clock.exe
+            output: http-clock-windows.zip
+
     name: release
     runs-on: ubuntu-24.04
     steps:
@@ -17,14 +27,23 @@ jobs:
 
       - run: |
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools gcc-mingw-w64-x86-64 libssl-dev
+          sudo apt-get install -y libssl-dev
 
-      - uses: actions-rs/toolchain@v1.0.7
+      - if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
+        run: |
+          sudo apt-get install -y gcc-mingw-w64-x86-64 
+
+      - name: Get Rust toolchain
+        id: toolchain
+        run: |
+          awk -F'[ ="]+' '$1 == "channel" { print "toolchain=" $2 }' rust-toolchain >> "$GITHUB_OUTPUT"
+
+      - name: install clippy
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: clippy
-          override: true
-          target: x86_64-unknown-linux-musl
+          toolchain: ${{ steps.toolchain.outputs.toolchain }}
+          targets: x86_64-pc-windows-gnu
 
       - uses: actions-rs/toolchain@v1.0.7
         with:
@@ -35,77 +54,62 @@ jobs:
         uses: Swatinem/rust-cache@v2.7.7
 
       - name: clippy check
-        uses: actions-rs/clippy-check@v1.0.7
+        uses: sksat/action-clippy@v1.1.1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          reporter: github-check
 
       - name: install cargo-license
-        uses: actions-rs/cargo@v1.0.3
-        with:
-          command: install
-          args: cargo-license
-
-      - name: compile for unit test
-        uses: actions-rs/cargo@v1.0.3
-        with:
-          command: test
-          args: --no-run --locked
+        run: cargo install cargo-license
 
       - name: unit test
-        uses: actions-rs/cargo@v1.0.3
-        with:
-          command: test
+        run: |
+          cargo test --no-run --locked
+          cargo test
 
-      - uses: actions-rs/cargo@v1.0.3
-        with:
-          command: build
-          args: --release --target x86_64-unknown-linux-gnu
+      - name: build
+        env:
+          TARGET: ${{ matrix.target }}
+        run:
+          cargo build --release --target $TARGET
 
-      - uses: actions-rs/cargo@v1.0.3
-        with:
-          command: build
-          args: --release --target x86_64-pc-windows-gnu
-
-      - run: |
+      - env:
+          TARGET: ${{ matrix.target }}
+          FILE: ${{ matrix.file }}
+          OUTPUT: ${{ matrix.output }}
+        run: |
+          mkdir obs-spotify-bridge
           cargo license \
             --authors \
             --do-not-bundle \
             --avoid-dev-deps \
             --avoid-build-deps \
-            --filter-platform x86_64-pc-windows-gnu \
-              > CREDITS.windows.txt
-          cargo license \
-            --authors \
-            --do-not-bundle \
-            --avoid-dev-deps \
-            --avoid-build-deps \
-            --filter-platform x86_64-unknown-linux-gnu \
-              > CREDITS.linux.txt
+            --filter-platform $TARGET \
+              > obs-spotify-bridge/CREDITS
+          VERSION_NAME=${GITHUB_REF##*/}
+          if [[ $VERSION_NAME == "master" ]]; then
+              VERSION_NAME=$(git rev-parse --short HEAD)
+          elif [[ ${VERSION_NAME:0:1} == "v" ]]; then
+              VERSION_NAME=${VERSION_NAME:1}
+          fi
+          echo "$VERSION_NAME" > obs-spotify-bridge/VERSION.txt
+          cp LICENSE README.md obs-spotify-bridge/
+          cp target/$TARGET/release/$FILE obs-spotify-bridge/
+          zip -r $OUTPUT obs-spotify-bridge
 
       - name: pre-release
         uses: softprops/action-gh-release@v2.2.1
         if: "! startsWith(github.ref, 'refs/tags/')"
         with:
-          tag_name: "latest"
+          tag_name: nightly-${{ github.sha }}
           prerelease: true
-          name: "Development Build"
+          fail_on_unmatched_files: true
           files: |
-            CREDITS.windows.txt
-            CREDITS.linux.txt
-            LICENSE
-            README.md
-            target/x86_64-pc-windows-gnu/release/obs-spotify-bridge.exe
-            target/x86_64-unknown-linux-gnu/release/obs-spotify-bridge
+            ${{ matrix.output }}
 
       - name: tagged-release
         uses: softprops/action-gh-release@v2.2.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          fail_on_unmatched_files: true
           files: |
-            CREDITS.windows.txt
-            CREDITS.linux.txt
-            LICENSE
-            README.md
-            target/x86_64-pc-windows-gnu/release/obs-spotify-bridge.exe
-            target/x86_64-unknown-linux-gnu/release/obs-spotify-bridge
+            ${{ matrix.output }}
