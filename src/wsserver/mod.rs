@@ -24,7 +24,7 @@ pub async fn serve(bind_address: &str, rx: Receiver) -> Result<()> {
 async fn accept_connection(stream: TcpStream, rx: Receiver) {
     if let Err(e) = handle_connection(stream, rx).await {
         match e {
-            TSError::ConnectionClosed | TSError::Protocol(_) | TSError::Utf8 => (),
+            TSError::ConnectionClosed | TSError::Protocol(_) | TSError::Utf8(_) => (),
             err => println!("Error processing connection: {err}"),
         }
     }
