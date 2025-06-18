@@ -1,20 +1,20 @@
 use crate::notify_model::{Music, Notify, Receiver};
-use anyhow::{Context, Result};
-use obws::{requests::inputs::{InputId, SetSettings}, Client};
+use anyhow::{Context, Result as AHResult};
+use obws::{
+    error::Result as OBResult,
+    requests::inputs::{InputId, SetSettings},
+    Client,
+};
 
 pub mod model;
 
 pub async fn obsdriver(
     addr: &str,
     port: u16,
-    pass: Option<String>,
+    pass: Option<&str>,
     rx: Receiver,
     mut shutdown_rx: model::ShutdownReceiver,
-) -> Result<()> {
-    let c = Client::connect(addr, port, pass)
-        .await
-        .with_context(|| "Failed to connect to OBS")?;
-
+) -> AHResult<()> {
     let mut rx = rx.clone();
 
     loop {
@@ -22,9 +22,7 @@ pub async fn obsdriver(
             changed = shutdown_rx.changed() => {
                 changed.with_context(|| "Failed to recv shutdown by master")?;
 
-                let v = None;
-                update_text(&c, v.as_ref()).await?;
-                update_albumart(&c, v.as_ref()).await?;
+                update(addr, port, pass, None).await?;
 
                 return Ok(())
             },
@@ -39,14 +37,28 @@ pub async fn obsdriver(
                     None
                 };
 
-                update_text(&c, v.as_ref()).await?;
-                update_albumart(&c, v.as_ref()).await?;
+                update(addr, port, pass, v.as_ref()).await?;
             }
         }
     }
 }
 
-pub async fn update_text(c: &Client, v: Option<&Music>) -> Result<()> {
+pub async fn update(addr: &str, port: u16, pass: Option<&str>, v: Option<&Music>) -> OBResult<()> {
+    let client = match Client::connect(addr, port, pass).await {
+        Ok(client) => client,
+        Err(e) => {
+            eprintln!("Failed to connect to OBS, ignoring: {e:?}");
+            return Ok(());
+        }
+    };
+
+    update_text(&client, v).await?;
+    update_albumart(&client, v).await?;
+
+    Ok(())
+}
+
+pub async fn update_text(c: &Client, v: Option<&Music>) -> OBResult<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {
@@ -77,7 +89,7 @@ pub async fn update_text(c: &Client, v: Option<&Music>) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_albumart(c: &Client, v: Option<&Music>) -> Result<()> {
+pub async fn update_albumart(c: &Client, v: Option<&Music>) -> OBResult<()> {
     let ii = c.inputs().list(None).await?;
 
     for i in ii {
