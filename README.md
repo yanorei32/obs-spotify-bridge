@@ -31,11 +31,8 @@ Reference: [Discord Spotify Connection – Discord](https://support.discord.com/
 
 ### Step 1. Get Discord's user token by Discord Client
 1. Login to [the web client](https://discord.com/login).
-1. Paste this code to the Browser Console.
-   [javascript - Any way to get my discord token from Browser Dev Console? - Stack Overflow](https://stackoverflow.com/questions/67348339)
-   ```javascript
-   (webpackChunkdiscord_app.push([[''],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!==void 0).exports.default.getToken()
-   ```
+1. Get token by Browser's Network Tab (Old method)
+   [How to Get Your Discord Token From the Browser Developer Console](https://gist.github.com/MarvNC/e601f3603df22f36ebd3102c501116c6)
 1. A token like this is displayed. `"ush9Zohzie6ahmohsoo6meCh.IThah7.jeephaijiachu8kuWoh0aephe5e"`
 
 ### Step 2. Create OBS sources
