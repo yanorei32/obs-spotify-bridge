@@ -1,83 +1,112 @@
 #![warn(clippy::pedantic)]
-use crate::discordapi::{get_spotify_credentials, renew_spotify_token};
-use crate::filter::drop_duplicate;
-use crate::obsdriver::obsdriver;
-use crate::spotifyapi::{connect_ws, is_available_token};
-use tokio::sync::watch;
 
-mod discordapi;
-mod filter;
 mod model;
-mod notify_model;
 mod obsdriver;
-mod spotifyapi;
+
+use clap::Parser;
+use itertools::Itertools;
+use spotnowplay::*;
+use tokio::sync::Mutex;
+
+struct App {
+    obs_config: model::ObsConfig,
+    previous_notified: Mutex<Option<model::Music>>,
+}
+
+#[async_trait::async_trait]
+impl EventHandler for App {
+    async fn on_playback_state_update(&self, player_state: Option<&api::PlaybackState>) {
+        let music = player_state
+            .map(|s| {
+                if s.is_playing {
+                    let title = match s.item.as_ref().unwrap() {
+                        api::Item::Track(track) => &track.name,
+                        api::Item::Episode(episode) => &episode.name,
+                    }
+                    .to_string();
+
+                    let artists = match s.item.as_ref().unwrap() {
+                        api::Item::Track(track) => track
+                            .artists
+                            .iter()
+                            .map(|a| a.name.as_str())
+                            .intersperse(", ")
+                            .collect::<String>(),
+                        api::Item::Episode(_) => "n/a".to_string(),
+                    };
+
+                    let albumart = match s.item.as_ref().unwrap() {
+                        api::Item::Track(track) => &track.album.images,
+                        api::Item::Episode(episode) => &episode.images,
+                    }
+                    .iter()
+                    .max_by_key(|image| image.width.unwrap_or(0) * image.height.unwrap_or(0))
+                    .map(|image| image.url.to_string())
+                    .unwrap_or("about:blank".to_string());
+
+                    Some(model::Music {
+                        title,
+                        artists,
+                        albumart,
+                    })
+                } else {
+                    None
+                }
+            })
+            .flatten();
+
+        let mut previous_notified = self.previous_notified.lock().await;
+
+        if music == *previous_notified {
+            return;
+        }
+
+        *previous_notified = music.clone();
+
+        tracing::info!("{music:?}");
+
+        let result = obsdriver::update(&self.obs_config, music.as_ref()).await;
+
+        if let Err(e) = result {
+            tracing::warn!("{e:?}");
+        }
+    }
+}
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let c = envy::from_env::<model::Config>().unwrap();
+    tracing_subscriber::fmt::init();
 
-    println!("Get Spotify credential by Discord WebSocket...");
-
-    let cred = get_spotify_credentials(&c.discord_token)
-        .expect("Failed to get Spotify credential from Discord credential.");
-
-    let token = if is_available_token(&cred.access_token).await.is_ok() {
-        cred.access_token.clone()
-    } else {
-        println!("Renew Spotify credential by Discord API...");
-        renew_spotify_token(&c.discord_token, &cred.id)
-            .await
-            .unwrap()
-    };
-
-    let (tx, to_f) = watch::channel(notify_model::Notify::Paused {});
-    let (from_f, mut rx) = watch::channel(notify_model::Notify::Paused {});
-
-    let mut filter = tokio::spawn(async move { drop_duplicate(to_f, from_f).await });
-    let mut spotify_ws = tokio::spawn(async move { connect_ws(&token, tx).await });
-
-    let (shutdown_tx, shutdown_rx) = watch::channel(obsdriver::model::ExpectedState::Operational);
-
-    let mut obsdriver = tokio::spawn({
-        let rx = rx.clone();
-        async move {
-            obsdriver(
-                &c.obs_address,
-                c.obs_port,
-                c.obs_password.as_deref(),
-                rx,
-                shutdown_rx,
-            )
-            .await
-        }
-    });
-
-    println!("Entering Main Loop...");
+    let config = model::Config::parse();
 
     loop {
+        let token = discord_integration::get_available_spotify_token(&config.discord_token)
+            .await
+            .unwrap();
+
+        let client = ClientBuilder::new(&token.access_token)
+            .handler(App {
+                obs_config: config.obs_config.clone(),
+                previous_notified: Mutex::new(None),
+            })
+            .build();
+
         tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
-                shutdown_tx.send(obsdriver::model::ExpectedState::GracefulShutdown).unwrap();
-            },
-            v = &mut spotify_ws => {
-                panic!("Unexpected Shutdown SpotifyWS: {:?}", v.unwrap());
-            },
-            v = &mut filter => {
-                panic!("Unexpected Shutdown Filter: {:?}", v.unwrap());
-            },
-            v = &mut obsdriver => {
-                if let Err(v) = v.unwrap() {
-                    panic!("Unexpected Shutdown OBSDriver: {v:?}");
-                } else {
-                    println!("Graceful shutdown is complete");
-                    return
+            _ = tokio::signal::ctrl_c() => break,
+            err = client.run() => {
+                match err {
+                    Err(RunError::WebSocketError(tungstenite::error::Error::Io(err)))
+                        if err.kind() == std::io::ErrorKind::TimedOut =>
+                    {
+                        tracing::info!("Spotify WebSocket TimedOut detected. Restarting...");
+                        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                        continue;
+                    }
+                    _ => break,
                 }
-            },
-            changed = rx.changed() => {
-                changed.expect("Failed to recv event by master");
-                let v = rx.borrow().clone();
-                println!("{v:?}");
-            },
+            }
         }
     }
+
+    let _ = obsdriver::update(&config.obs_config, None).await;
 }

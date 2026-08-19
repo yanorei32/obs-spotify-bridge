@@ -1,22 +1,32 @@
-use serde::Deserialize;
+use clap::Parser;
 
-#[derive(Debug, Deserialize)]
-pub struct Config {
-    pub discord_token: String,
-
-    #[serde(default = "default_obs_address")]
+#[derive(Clone, Debug, Parser)]
+pub struct ObsConfig {
+    #[clap(env, long, default_value = "127.0.0.1")]
     pub obs_address: String,
 
-    #[serde(default = "default_obs_port")]
+    #[clap(env, long, default_value = "4455")]
     pub obs_port: u16,
 
+    #[clap(env, long)]
     pub obs_password: Option<String>,
+
+    #[clap(env, long, default_value = "♪%TITLE%/%ARTISTS%")]
+    pub format: String,
 }
 
-fn default_obs_address() -> String {
-    "127.0.0.1".to_string()
+#[derive(Clone, Debug, Parser)]
+pub struct Config {
+    #[clap(env, long)]
+    pub discord_token: String,
+
+    #[clap(flatten)]
+    pub obs_config: ObsConfig,
 }
 
-fn default_obs_port() -> u16 {
-    4455
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Music {
+    pub title: String,
+    pub artists: String,
+    pub albumart: String,
 }
