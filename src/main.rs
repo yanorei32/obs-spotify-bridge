@@ -75,7 +75,7 @@ impl EventHandler for App {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().with_ansi(false).init();
 
     let config = model::Config::parse();
 
